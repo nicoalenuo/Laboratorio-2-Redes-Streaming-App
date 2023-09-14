@@ -1,0 +1,67 @@
+const ServerIP = 127.0.0.1 //Aca se aceptan conexiones de control tcp
+const ServerPort = 2023
+
+const SourceIP = 127.0.0.1 //Aca se recibirán los datagramas a reenviar
+const SourcePort = 65534 
+
+sktStream = socket.udp() //Por este socket se recibirán los datagramas a reenviar
+sktStream.bind(SourceIP, SourcePort)
+
+sktEnvio = socket.upd() //Por este socket se reenviarán los datagramas a todos los clientes que esten conectados (y no hayan interrumpido)
+
+sktC = socket.tcp() //Por este socket se recibirán los mensajes de control (conectar, interrumpir, etc)
+sktC.bind(ServerIP, ServerPort)
+sktControl = sktC.listen()
+sktControl.setTimeout(-1) //Bloqueante
+
+clientes = list<(int, int)> //Lista global de la forma ip, puerto, tales que hay que enviar los datagramas recibidos
+
+//////////////////////////////Comienza el main
+
+thread.new(aceptarConexiones, sktControl) //Para aceptar conexiones de control sin detener el stream
+while(true):
+    datagrama = sktStream.receive()
+    for (ipCliente, puertoCliente) in clientes:
+        sktEnvio.sendto(datagrama, ipCliente, puertoCliente)
+
+//////////////////////////////
+
+aceptarConexiones(sktControl){
+    while (true):
+        cliente, err = sktControl.accept() //Boqueante
+        if (err != 'failure'):
+            thread.new(aceptarControl, cliente)
+}
+
+/////////////////////////////
+
+aceptarControl(cliente):
+    cliente.setTimeout(-1) //Bloqueante
+    desconectar = false
+    ipCliente, puertoClinte = nil
+    buffer = ''
+
+    while (!desconectar):
+        
+        repeat
+            data, err = cliente.receive()
+            buffer = buffer + data
+        until find(buffer, '\n') or (err == 'closed')
+        
+        if (err != 'closed')
+            comando, buffer = split(buffer, '\n') //Si la entrada es aaa\nbbb\nccc, se devuelve aaa, bbb\nccc
+
+        if (err == 'closed' or comando == 'DESCONECTAR')
+            clientes.remove((ipCliente,puertoCliente))
+            cliente.close()
+            desconectar = true
+        else if (comando.contains('CONECTAR')):
+            ipCliente = cliente.getPeer()
+            puertoCliente = split(comando, ' ')
+            clientes.add((ipCliente,puertoCliente))
+        else if (comando == 'INTERRUMPIR'):
+            clientes.remove((ipCliente,puertoCliente))
+        else if (comando == 'CONTINUAR'):
+            clientes.add((ipCliente,puertoCliente))
+
+        //Notar que los comandos no validos se ignoran

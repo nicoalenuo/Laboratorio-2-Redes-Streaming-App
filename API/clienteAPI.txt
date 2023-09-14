@@ -1,0 +1,24 @@
+const ServerIP = 127.0.0.1
+const ServerPort = 2023
+
+master = socket.tcp()
+
+repeat
+    sktControl, err = master.connect(ServerIP, ServerPort)
+until err != 'failure'
+
+desconectar = false
+
+while (!desconectar):
+    comando = input()
+
+    while 
+        comando  = sktControl.send(comando)
+    comando != ''
+    
+    if (split(comando, \n) == 'DESCONECTAR'):
+        desconectar = true
+        sktControl.close()
+
+    //Podemos agregar control de que solo se envien comando correctos
+
