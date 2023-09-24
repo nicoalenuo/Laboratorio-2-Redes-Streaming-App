@@ -17,6 +17,8 @@ sktC = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sktC.bind((ServerIP, ServerPort))
 sktC.listen()
 
+clientes_lock = threading.Lock()
+
 print("Server abierto") #Para probar que abre :P
 
 clientes = [] #Lista global donde se guardarán los clientes "activos"
@@ -41,7 +43,8 @@ def aceptarControl(cliente):
             comando = comando.decode('utf-8')
 
             if comando == 'DESCONECTAR':
-                clientes.remove((ipCliente, puertoCliente))
+                with clientes_lock:
+                    clientes.remove((ipCliente, puertoCliente))
                 cliente.close()
                 desconectar = True
                 print("Quitado " + ipCliente + ":" + str(puertoCliente), ", se desconecta")
@@ -49,13 +52,16 @@ def aceptarControl(cliente):
                 ipCliente = cliente.getpeername()[0]
                 _, puertoStr = comando.split(' ') #Si el comando es CONECTAR <puerto>, con split me quedo con la parte de la derecha (el puerto)
                 puertoCliente = int(puertoStr)
-                clientes.append((ipCliente, puertoCliente))
+                with clientes_lock:
+                    clientes.append((ipCliente, puertoCliente))
                 print("Agregado " + ipCliente + ":" + str(puertoCliente), ", se conecta")
             elif comando == 'INTERRUMPIR':
-                clientes.remove((ipCliente, puertoCliente))
+                with clientes_lock:
+                    clientes.remove((ipCliente, puertoCliente))
                 print("Quitado " + ipCliente + ":" + str(puertoCliente), ", interrumpe")
             elif comando == 'CONTINUAR':
-                clientes.append((ipCliente, puertoCliente))
+                with clientes_lock:
+                    clientes.append((ipCliente, puertoCliente))
                 print("Agregado " + ipCliente + ":" + str(puertoCliente), ", continua")
 
         except Exception as e:
