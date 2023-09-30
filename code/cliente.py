@@ -22,16 +22,15 @@ while not desconectar:
         while (comando != "INTERRUMPIR" and comando != "DESCONECTAR"):
             comando = input()
             
-        if (comando != "DESCONECTAR"):
+        if (comando == "INTERRUMPIR"):
             master.send(comando.encode())
 
         while (comando != "CONTINUAR" and comando != "DESCONECTAR"):
             comando = input()
 
-        if (comando != "DESCONECTAR"):
+        if (comando == "CONTINUAR"):
             master.send(comando.encode())
 
     master.send(comando.encode())
     master.close()
     desconectar = True
-    
