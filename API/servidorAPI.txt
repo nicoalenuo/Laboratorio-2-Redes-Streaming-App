@@ -1,5 +1,7 @@
-const ServerIP = 127.0.0.1 //Aca se aceptan conexiones de control tcp
-const ServerPort = 2023
+const ServerIP = sys.argv[1] //Aca se aceptan conexiones de control tcp
+const ServerPort = sys.argv[2]
+
+//por ejemplo, ServerIP = 125 y ServerPort = 2023
 
 const SourceIP = 127.0.0.1 //Aca se recibirán los datagramas a reenviar
 const SourcePort = 65534 

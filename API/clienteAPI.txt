@@ -1,5 +1,6 @@
-const ServerIP = 127.0.0.1
-const ServerPort = 2023
+const ServerIP = argv[1] #Por ejemplo, 127.0.0.1
+const ServerPort = argv[2] #Por ejemplo, 2023
+VLCPort = argv[3] #Por ejemplo, 7777
 
 master = socket.tcp()
 
@@ -9,15 +10,12 @@ until err != 'failure'
 
 desconectar = false
 
-
-
-
 while (!desconectar):
 
     comando = ""
     while (comando != "CONECTAR"):
         comando = input()
-
+    comando += " " + VLCPort //Se envia el puerto vlc en conjunto con el comando CONECTAR
     repeat
         comando, err = sktControl.send(comando)
         if err:
