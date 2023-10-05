@@ -9,16 +9,54 @@ until err != 'failure'
 
 desconectar = false
 
+
+
+
 while (!desconectar):
-    comando = input()
 
-    while 
-        comando  = sktControl.send(comando)
-    comando != ''
-    
-    if (split(comando, \n) == 'DESCONECTAR'):
-        desconectar = true
-        sktControl.close()
+    comando = ""
+    while (comando != "CONECTAR"):
+        comando = input()
 
-    //Podemos agregar control de que solo se envien comando correctos
+    repeat
+        comando, err = sktControl.send(comando)
+        if err:
+            sktControl.close()
+            return
+    until (comando = '')
+
+    while (comando != "DESCONECTAR"):
+        while (comando != "INTERRUMPIR" and comando != "DESCONECTAR"):
+            comando = input()
+            
+        if (comando == "INTERRUMPIR"):
+            repeat
+                comando, err = sktControl.send(comando)
+                if err:
+                    sktControl.close()
+                    return
+            until (comando = '')
+
+        while (comando != "CONTINUAR" and comando != "DESCONECTAR"):
+            comando = input()
+
+        if (comando == "CONTINUAR"):
+            repeat
+                comando, err = sktControl.send(comando)
+                if err:
+                    sktControl.close()
+                    return
+            until (comando = '')
+
+    repeat
+        comando, err = sktControl.send(comando)
+        if err:
+            sktControl.close()
+            return
+    until (comando = '')
+    sktControl.close()
+    desconectar = True
+
+
+
 

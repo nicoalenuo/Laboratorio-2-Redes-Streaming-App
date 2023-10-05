@@ -16,7 +16,9 @@ sktControl.setTimeout(-1) //Bloqueante
 
 clientes = list<(int, int)> //Lista global de la forma ip, puerto, tales que hay que enviar los datagramas recibidos
 
-//////////////////////////////Comienza el main
+semaforoMutex = Semaphore(1) //se inicializa el semaforo en 1
+
+//Comienza el main _____________________________________________________________________________________________________
 
 thread.new(aceptarConexiones, sktControl) //Para aceptar conexiones de control sin detener el stream
 while(true):
@@ -24,7 +26,7 @@ while(true):
     for (ipCliente, puertoCliente) in clientes:
         sktEnvio.sendto(datagrama, ipCliente, puertoCliente)
 
-//////////////////////////////
+//_____________________________________________________________________________________________________
 
 aceptarConexiones(sktControl){
     while (true):
@@ -33,7 +35,7 @@ aceptarConexiones(sktControl){
             thread.new(aceptarControl, cliente)
 }
 
-/////////////////////////////
+//_____________________________________________________________________________________________________
 
 aceptarControl(cliente):
     cliente.setTimeout(-1) //Bloqueante
@@ -52,16 +54,29 @@ aceptarControl(cliente):
             comando, buffer = split(buffer, '\n') //Si la entrada es aaa\nbbb\nccc, se devuelve aaa, bbb\nccc
 
         if (err == 'closed' or comando == 'DESCONECTAR')
+            P(semaforoMutex)
             clientes.remove((ipCliente,puertoCliente))
+            V(semaforoMutex)
+            
             cliente.close()
             desconectar = true
+
         else if (comando.contains('CONECTAR')):
             ipCliente = cliente.getPeer()
             puertoCliente = split(comando, ' ')
+            
+            P(semaforoMutex)
             clientes.add((ipCliente,puertoCliente))
+            V(semaforoMutex)
+        
         else if (comando == 'INTERRUMPIR'):
+            P(semaforoMutex)
             clientes.remove((ipCliente,puertoCliente))
+            V(semaforoMutex)
+        
         else if (comando == 'CONTINUAR'):
+            P(semaforoMutex)
             clientes.add((ipCliente,puertoCliente))
+            V(semaforoMutex)
 
         //Notar que los comandos no validos se ignoran
