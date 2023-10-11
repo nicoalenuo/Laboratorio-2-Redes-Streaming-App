@@ -36,11 +36,17 @@ def aceptarControl(cliente):
     desconectar = False
     ipCliente = None
     puertoCliente = None
-
+    
     while not desconectar:
+        buffer = b""
+        comando = b""
         try:
-            comando = cliente.recv(4096)
+            while b'\n' not in comando:
+                buffer = cliente.recv(1)
+                comando += buffer
+
             comando = comando.decode('utf-8')
+            comando, _ = comando.split('\n', 1)
 
             if comando == 'DESCONECTAR':
                 with clientes_lock:
@@ -64,9 +70,12 @@ def aceptarControl(cliente):
                     clientes.append((ipCliente, puertoCliente))
                 print("Agregado " + ipCliente + ":" + str(puertoCliente), ", continua")
 
-        except Exception as e:
-            print("Error:", e)
-            break
+        except Exception:
+            cliente.close()
+            with clientes_lock:
+                clientes.remove((ipCliente, puertoCliente))
+            print("Quitado " + ipCliente + ":" + str(puertoCliente), ", ocurrió una excepción")
+            desconectar = True
 
 # Se inicia el hilo para las conexiones de control
 threadControl = threading.Thread(target = aceptarConexiones, args=(sktC,))

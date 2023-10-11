@@ -16,21 +16,21 @@ while not desconectar:
     while (comando != "CONECTAR"):
         comando = input()
 
-    master.send((comando + " " + VLCPort).encode())
+    master.send((comando + " " + VLCPort + "\n").encode())
 
     while (comando != "DESCONECTAR"):
         while (comando != "INTERRUMPIR" and comando != "DESCONECTAR"):
             comando = input()
             
         if (comando == "INTERRUMPIR"):
-            master.send(comando.encode())
+            master.send((comando + "\n").encode())
 
         while (comando != "CONTINUAR" and comando != "DESCONECTAR"):
             comando = input()
 
         if (comando == "CONTINUAR"):
-            master.send(comando.encode())
+            master.send((comando + "\n").encode())
 
-    master.send(comando.encode())
+    master.send((comando + "\n").encode())
     master.close()
     desconectar = True
