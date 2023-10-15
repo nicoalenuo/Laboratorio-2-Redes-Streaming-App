@@ -7,7 +7,7 @@ ServerIP = sys.argv[1] #Por ejemplo, 127.0.0.1
 ServerPort = int(sys.argv[2]) #Por ejemplo, 2023
 
 SourceIP = '127.0.0.1' #Colocar la IP de donde vendrá el stream de VLC 
-SourcePort = 9999
+SourcePort = 65534
 
 sktStream = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #Todo esto es lo mismo que en el pseudo-codigo
 sktStream.bind((SourceIP, SourcePort))
