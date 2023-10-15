@@ -10,48 +10,48 @@ until err != 'failure'
 
 desconectar = false
 
-while (!desconectar):
+enviar_server(comando){ //Funcion auxiliar que nos ayuda a no repetir codigo
+    buffer = ''
+    respuesta = ''
 
-    comando = ""
-    while (comando != "CONECTAR"):
-        comando = input()
-    comando += " " + VLCPort //Se envia el puerto vlc en conjunto con el comando CONECTAR
     repeat
         comando, err = sktControl.send(comando)
         if err:
             sktControl.close()
             return
     until (comando = '')
+
+    repeat
+        buffer, err = cliente.receive()
+        respuesta = respuesta + buffer
+    until find(respuesta, '\n') or (err == 'closed')
+
+    if (err)
+        sktControl.close()
+        return
+}
+
+while (!desconectar):
+    comando = ""
+    while (comando != "CONECTAR"):
+        comando = input()
+
+    enviar_server(comando + VLCPort + '\n') //Se envia el puerto vlc en conjunto con el comando CONECTAR
 
     while (comando != "DESCONECTAR"):
         while (comando != "INTERRUMPIR" and comando != "DESCONECTAR"):
             comando = input()
             
         if (comando == "INTERRUMPIR"):
-            repeat
-                comando, err = sktControl.send(comando)
-                if err:
-                    sktControl.close()
-                    return
-            until (comando = '')
+            enviar_server(comando + '\n')
 
         while (comando != "CONTINUAR" and comando != "DESCONECTAR"):
             comando = input()
 
         if (comando == "CONTINUAR"):
-            repeat
-                comando, err = sktControl.send(comando)
-                if err:
-                    sktControl.close()
-                    return
-            until (comando = '')
+            enviar_server(comando + '\n')
 
-    repeat
-        comando, err = sktControl.send(comando)
-        if err:
-            sktControl.close()
-            return
-    until (comando = '')
+    enviar_server(comando + '\n')
     sktControl.close()
     desconectar = True
 

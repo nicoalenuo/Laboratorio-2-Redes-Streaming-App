@@ -27,6 +27,7 @@ def enviar_server(comando):
             bytes_enviados += enviados
         except socket.error:
             master.close()
+            print("Ocurrio un error")
             exit()
 
     while b'OK\n' not in respuesta:

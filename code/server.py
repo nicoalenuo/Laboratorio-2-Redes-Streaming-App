@@ -1,6 +1,7 @@
 import socket
 import threading
 import sys
+import re
 
 ServerIP = sys.argv[1] #Por ejemplo, 127.0.0.1
 ServerPort = int(sys.argv[2]) #Por ejemplo, 2023
@@ -25,14 +26,14 @@ clientes = [] #Lista global donde se guardarán los clientes "activos"
 
 #Funcion para enviar respuesta al cliente
 #evita repetir codigo
-def enviar_cliente(comando, cliente):
-    comando = comando.encode()
-    total_bytes = len(comando)
+def enviar_cliente(respuesta, cliente):
+    respuesta = respuesta.encode()
+    total_bytes = len(respuesta)
     bytes_enviados = 0
 
     while bytes_enviados < total_bytes:
         try:
-            enviados = cliente.send(comando[bytes_enviados:])
+            enviados = cliente.send(respuesta[bytes_enviados:])
             bytes_enviados += enviados
         except socket.error:
             cliente.close()
@@ -41,9 +42,12 @@ def enviar_cliente(comando, cliente):
 # Función para aceptar conexiones TCP
 def aceptarConexiones(sktControl):
     while True:
-        cliente, _ = sktControl.accept()
-        thread = threading.Thread(target = aceptarControl, args=(cliente,))
-        thread.start()
+        try:
+            cliente, _ = sktControl.accept()
+            thread = threading.Thread(target = aceptarControl, args=(cliente,))
+            thread.start()
+        except Exception as err:
+            print("Ocurrio un error al aceptar conexion TCP")
 
 # Función para manejar la conexiones de control
 def aceptarControl(cliente):
@@ -51,6 +55,7 @@ def aceptarControl(cliente):
     desconectar = False
     ipCliente = None
     puertoCliente = None
+    conectado = False
     
     while not desconectar:
         buffer = b""
@@ -68,24 +73,25 @@ def aceptarControl(cliente):
             comando, _ = comando.split('\n', 1)
 
 
-            if comando.startswith('CONECTAR'):
+            if not conectado and re.match(r'^CONECTAR \d{1,5}$', comando):
                 ipCliente = cliente.getpeername()[0]
                 _, puertoStr = comando.split(' ') #Si el comando es CONECTAR <puerto>, con split me quedo con la parte de la derecha (el puerto)
                 puertoCliente = int(puertoStr)
+                conectado = True
                 with clientes_lock:
                     if (ipCliente, puertoCliente) not in clientes:
                         clientes.append((ipCliente, puertoCliente))
                 print("Agregado " + ipCliente + ":" + str(puertoCliente), ", se conecta")
                 enviar_cliente("OK\n", cliente)
 
-            elif comando == 'INTERRUMPIR':
+            elif conectado and comando == 'INTERRUMPIR':
                 with clientes_lock:
                     if (ipCliente, puertoCliente) in clientes:
                         clientes.remove((ipCliente, puertoCliente))
                 print("Quitado " + ipCliente + ":" + str(puertoCliente), ", interrumpe")
                 enviar_cliente("OK\n", cliente)
 
-            elif comando == 'CONTINUAR':
+            elif conectado and comando == 'CONTINUAR':
                 with clientes_lock:
                     if (ipCliente, puertoCliente) not in clientes:
                         clientes.append((ipCliente, puertoCliente))
@@ -115,6 +121,6 @@ threadControl.start()
 
 # Main, desde donde se reenvian todos los datagramas recibidos
 while True:
-    datagrama, (ip, puerto) = sktStream.recvfrom(16384)
+    datagrama, (ip, puerto) = sktStream.recvfrom(2048)
     for clienteIp, clientePuerto in clientes:
         sktEnvio.sendto(datagrama, (clienteIp, clientePuerto))

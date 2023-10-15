@@ -1,7 +1,7 @@
 const ServerIP = sys.argv[1] //Aca se aceptan conexiones de control tcp
 const ServerPort = sys.argv[2]
 
-//por ejemplo, ServerIP = 125 y ServerPort = 2023
+//Por ejemplo, ServerIP = 127.0.0.1 y ServerPort = 2023
 
 const SourceIP = 127.0.0.1 //Aca se recibirán los datagramas a reenviar
 const SourcePort = 65534 
@@ -30,9 +30,20 @@ while(true):
 
 //_____________________________________________________________________________________________________
 
+enviar_cliente(respuesta, cliente){ //Funcion auxiliar que nos ayuda a no repetir codigo
+    repeat
+        respuesta, err = cliente.send(respuesta)
+        if err:
+            cliente.close()
+            return
+    until (respuesta = '')
+}
+
+//________________________________________________________________________________________________________________
+
 aceptarConexiones(sktControl){
     while (true):
-        cliente, err = sktControl.accept() //Boqueante
+        cliente, err = sktControl.accept() //Bloqueante
         if (err != 'failure'):
             thread.new(aceptarControl, cliente)
 }
@@ -43,42 +54,57 @@ aceptarControl(cliente):
     cliente.setTimeout(-1) //Bloqueante
     desconectar = false
     ipCliente, puertoClinte = nil
-    buffer = ''
+    conectado = false
 
     while (!desconectar):
+        buffer = ''
+        comando = ''
         
         repeat
-            data, err = cliente.receive()
-            buffer = buffer + data
-        until find(buffer, '\n') or (err == 'closed')
+            buffer, err = cliente.receive()
+            comando = comando + buffer
+        until find(comando, '\n') or (err == 'closed')
         
         if (err != 'closed')
-            comando, buffer = split(buffer, '\n') //Si la entrada es aaa\nbbb\nccc, se devuelve aaa, bbb\nccc
+            comando = split(comando, '\n') //Si la entrada es aaa\n, se devuelve aaa
 
-        if (err == 'closed' or comando == 'DESCONECTAR')
-            P(semaforoMutex)
-            clientes.remove((ipCliente,puertoCliente))
-            V(semaforoMutex)
-            
-            cliente.close()
-            desconectar = true
-
-        else if (comando.contains('CONECTAR')):
+        if (!conectado and comando.match(r'^CONECTAR \d{1,5}$')):
             ipCliente = cliente.getPeer()
             puertoCliente = split(comando, ' ')
+            conectado = true
             
             P(semaforoMutex)
-            clientes.add((ipCliente,puertoCliente))
+            if (ipCliente, puertoCliente) not in clientes:
+                clientes.add((ipCliente,puertoCliente))
             V(semaforoMutex)
+
+            enviar_cliente("OK\n", cliente)
         
         else if (comando == 'INTERRUMPIR'):
             P(semaforoMutex)
-            clientes.remove((ipCliente,puertoCliente))
+            if (ipCliente, puertoCliente) in clientes:
+                clientes.remove((ipCliente,puertoCliente))
             V(semaforoMutex)
+
+            enviar_cliente("OK\n", cliente)
         
         else if (comando == 'CONTINUAR'):
             P(semaforoMutex)
-            clientes.add((ipCliente,puertoCliente))
+            if (ipCliente, puertoCliente) not in clientes:
+                clientes.add((ipCliente,puertoCliente))
+            V(semaforoMutex)
+            
+            enviar_cliente("OK\n", cliente)
+
+        else if (err == 'closed' or comando == 'DESCONECTAR')
+            P(semaforoMutex)
+            if (ipCliente, puertoCliente) in clientes:
+                clientes.remove((ipCliente,puertoCliente))
             V(semaforoMutex)
 
+            enviar_cliente("OK\n", cliente)
+            cliente.close()
+            desconectar = true
+
         //Notar que los comandos no validos se ignoran
+        //y los fuera de orden no provocan ningun error o cambio
