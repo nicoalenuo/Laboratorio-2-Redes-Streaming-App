@@ -23,6 +23,21 @@ print("Server abierto") #Para probar que abre :P
 
 clientes = [] #Lista global donde se guardarán los clientes "activos"
 
+#Funcion para enviar respuesta al cliente
+#evita repetir codigo
+def enviar_cliente(comando, cliente):
+    comando = comando.encode()
+    total_bytes = len(comando)
+    bytes_enviados = 0
+
+    while bytes_enviados < total_bytes:
+        try:
+            enviados = cliente.send(comando[bytes_enviados:])
+            bytes_enviados += enviados
+        except socket.error:
+            cliente.close()
+            break
+
 # Función para aceptar conexiones TCP
 def aceptarConexiones(sktControl):
     while True:
@@ -45,39 +60,52 @@ def aceptarControl(cliente):
                 buffer = cliente.recv(1)
                 comando += buffer
                 #Si se interrumpe el cliente, se cierra el socket por lo que se recibe 0 bytes de informacion, de esta forma
-                #se decta si el cliente se cierra de forma inesperada sin usar DESCONECTAR
+                #se detecta si el cliente cierra de forma inesperada sin usar DESCONECTAR
                 if not buffer:
                     raise Exception
 
             comando = comando.decode('utf-8')
             comando, _ = comando.split('\n', 1)
 
-            if comando == 'DESCONECTAR':
-                with clientes_lock:
-                    clientes.remove((ipCliente, puertoCliente))
-                cliente.close()
-                desconectar = True
-                print("Quitado " + ipCliente + ":" + str(puertoCliente), ", se desconecta")
-            elif comando.startswith('CONECTAR'):
+
+            if comando.startswith('CONECTAR'):
                 ipCliente = cliente.getpeername()[0]
                 _, puertoStr = comando.split(' ') #Si el comando es CONECTAR <puerto>, con split me quedo con la parte de la derecha (el puerto)
                 puertoCliente = int(puertoStr)
                 with clientes_lock:
-                    clientes.append((ipCliente, puertoCliente))
+                    if (ipCliente, puertoCliente) not in clientes:
+                        clientes.append((ipCliente, puertoCliente))
                 print("Agregado " + ipCliente + ":" + str(puertoCliente), ", se conecta")
+                enviar_cliente("OK\n", cliente)
+
             elif comando == 'INTERRUMPIR':
                 with clientes_lock:
-                    clientes.remove((ipCliente, puertoCliente))
+                    if (ipCliente, puertoCliente) in clientes:
+                        clientes.remove((ipCliente, puertoCliente))
                 print("Quitado " + ipCliente + ":" + str(puertoCliente), ", interrumpe")
+                enviar_cliente("OK\n", cliente)
+
             elif comando == 'CONTINUAR':
                 with clientes_lock:
-                    clientes.append((ipCliente, puertoCliente))
+                    if (ipCliente, puertoCliente) not in clientes:
+                        clientes.append((ipCliente, puertoCliente))
                 print("Agregado " + ipCliente + ":" + str(puertoCliente), ", continua")
+                enviar_cliente("OK\n", cliente)
+
+            elif comando == 'DESCONECTAR':
+                with clientes_lock:
+                    if (ipCliente, puertoCliente) in clientes:
+                        clientes.remove((ipCliente, puertoCliente))
+                desconectar = True
+                print("Quitado " + ipCliente + ":" + str(puertoCliente), ", se desconecta")
+                enviar_cliente("OK\n", cliente)
+                cliente.close()
 
         except Exception:
             cliente.close()
             with clientes_lock:
-                clientes.remove((ipCliente, puertoCliente))
+                if (ipCliente, puertoCliente) in clientes:
+                        clientes.remove((ipCliente, puertoCliente))
             print("Quitado " + ipCliente + ":" + str(puertoCliente), ", ocurrió una excepción")
             desconectar = True
 
