@@ -44,6 +44,10 @@ def aceptarControl(cliente):
             while b'\n' not in comando:
                 buffer = cliente.recv(1)
                 comando += buffer
+                #Si se interrumpe el cliente, se cierra el socket por lo que se recibe 0 bytes de informacion, de esta forma
+                #se decta si el cliente se cierra de forma inesperada sin usar DESCONECTAR
+                if not buffer:
+                    raise Exception
 
             comando = comando.decode('utf-8')
             comando, _ = comando.split('\n', 1)
