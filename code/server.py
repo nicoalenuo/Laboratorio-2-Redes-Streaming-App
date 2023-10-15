@@ -20,12 +20,10 @@ sktC.listen()
 
 clientes_lock = threading.Lock()
 
-print("Server abierto") #Para probar que abre :P
-
 clientes = [] #Lista global donde se guardarán los clientes "activos"
 
 #Funcion para enviar respuesta al cliente
-#evita repetir codigo
+#Evita repetir codigo
 def enviar_cliente(respuesta, cliente):
     respuesta = respuesta.encode()
     total_bytes = len(respuesta)
@@ -62,7 +60,7 @@ def aceptarControl(cliente):
         comando = b""
         try:
             while b'\n' not in comando:
-                buffer = cliente.recv(8)
+                buffer = cliente.recv(16)
                 comando += buffer
                 #Si se interrumpe el cliente, se cierra el socket por lo que se recibe 0 bytes de informacion, de esta forma
                 #se detecta si el cliente cierra de forma inesperada sin usar DESCONECTAR
