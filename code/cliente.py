@@ -1,19 +1,15 @@
 import socket
 import sys
 
-
 ServerIP = sys.argv[1] #Por ejemplo, 127.0.0.1
 ServerPort = int(sys.argv[2]) #Por ejemplo, 2023
 VLCPort = sys.argv[3] #Por ejemplo, 7777
 
 master = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 master.connect((ServerIP, ServerPort))
-
 desconectar = False
-print("Cliente abierto") #To test que abre very good the english
-
 #Funcion para enviar los comandos al server
-#evita repetir codigo
+#Evita repetir codigo
 def enviar_server(comando):
     respuesta = b""
     buffer = b""
@@ -31,7 +27,7 @@ def enviar_server(comando):
             exit()
 
     while b'OK\n' not in respuesta:
-        buffer = master.recv(8)
+        buffer = master.recv(16)
         respuesta += buffer
     print("OK")
 
