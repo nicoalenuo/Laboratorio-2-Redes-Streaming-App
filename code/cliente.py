@@ -17,7 +17,7 @@ print("Cliente abierto") #To test que abre very good the english
 def enviar_server(comando):
     respuesta = b""
     buffer = b""
-    comando = comando.encode()
+    comando = comando.encode() 
     total_bytes = len(comando)
     bytes_enviados = 0
 
@@ -31,7 +31,7 @@ def enviar_server(comando):
             exit()
 
     while b'OK\n' not in respuesta:
-        buffer = master.recv(1)
+        buffer = master.recv(8)
         respuesta += buffer
     print("OK")
 
@@ -39,15 +39,14 @@ def enviar_server(comando):
 while not desconectar:
     comando = ""
 
-    while (comando != "CONECTAR"):
+    while (comando != "CONECTAR" and comando != "DESCONECTAR"):
         comando = input()
 
-    enviar_server(comando + " " + VLCPort + "\n")
+    if comando == "CONECTAR":
+        enviar_server(comando + " " + VLCPort + "\n")
 
     while (comando != "DESCONECTAR"):
-        respuesta = b""
-        buffer = b""
-
+        
         while (comando != "INTERRUMPIR" and comando != "DESCONECTAR"):
             comando = input()
             

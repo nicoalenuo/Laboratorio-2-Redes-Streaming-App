@@ -53,7 +53,8 @@ aceptarConexiones(sktControl){
 aceptarControl(cliente):
     cliente.setTimeout(-1) //Bloqueante
     desconectar = false
-    ipCliente, puertoClinte = nil
+    ipCliente = ""
+    puertoCliente
     conectado = false
 
     while (!desconectar):
@@ -80,7 +81,7 @@ aceptarControl(cliente):
 
             enviar_cliente("OK\n", cliente)
         
-        else if (comando == 'INTERRUMPIR'):
+        else if (conectado and comando == 'INTERRUMPIR'):
             P(semaforoMutex)
             if (ipCliente, puertoCliente) in clientes:
                 clientes.remove((ipCliente,puertoCliente))
@@ -88,7 +89,7 @@ aceptarControl(cliente):
 
             enviar_cliente("OK\n", cliente)
         
-        else if (comando == 'CONTINUAR'):
+        else if (conectado and comando == 'CONTINUAR'):
             P(semaforoMutex)
             if (ipCliente, puertoCliente) not in clientes:
                 clientes.add((ipCliente,puertoCliente))
@@ -96,15 +97,24 @@ aceptarControl(cliente):
             
             enviar_cliente("OK\n", cliente)
 
-        else if (err == 'closed' or comando == 'DESCONECTAR')
-            P(semaforoMutex)
-            if (ipCliente, puertoCliente) in clientes:
-                clientes.remove((ipCliente,puertoCliente))
-            V(semaforoMutex)
-
+        else if (comando == 'DESCONECTAR')
             enviar_cliente("OK\n", cliente)
             cliente.close()
             desconectar = true
+            if conectado: 
+                P(semaforoMutex)
+                if (ipCliente, puertoCliente) in clientes:
+                    clientes.remove((ipCliente,puertoCliente))
+                V(semaforoMutex)  
+
+        else if (err == 'closed')
+            cliente.close()
+            desconectar = true
+            if conectado:
+                P(semaforoMutex)
+                if (ipCliente, puertoCliente) in clientes:
+                    clientes.remove((ipCliente,puertoCliente))
+                V(semaforoMutex)
 
         //Notar que los comandos no validos se ignoran
         //y los fuera de orden no provocan ningun error o cambio

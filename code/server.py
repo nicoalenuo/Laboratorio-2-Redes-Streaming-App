@@ -62,7 +62,7 @@ def aceptarControl(cliente):
         comando = b""
         try:
             while b'\n' not in comando:
-                buffer = cliente.recv(1)
+                buffer = cliente.recv(8)
                 comando += buffer
                 #Si se interrumpe el cliente, se cierra el socket por lo que se recibe 0 bytes de informacion, de esta forma
                 #se detecta si el cliente cierra de forma inesperada sin usar DESCONECTAR
@@ -99,21 +99,24 @@ def aceptarControl(cliente):
                 enviar_cliente("OK\n", cliente)
 
             elif comando == 'DESCONECTAR':
-                with clientes_lock:
-                    if (ipCliente, puertoCliente) in clientes:
-                        clientes.remove((ipCliente, puertoCliente))
-                desconectar = True
-                print("Quitado " + ipCliente + ":" + str(puertoCliente), ", se desconecta")
+                desconectar = True 
                 enviar_cliente("OK\n", cliente)
                 cliente.close()
-
+                if conectado:
+                    with clientes_lock:
+                        if (ipCliente, puertoCliente) in clientes:
+                            clientes.remove((ipCliente, puertoCliente))
+                    print("Quitado " + ipCliente + ":" + str(puertoCliente), ", se desconecta")
+                
         except Exception:
             cliente.close()
-            with clientes_lock:
-                if (ipCliente, puertoCliente) in clientes:
-                        clientes.remove((ipCliente, puertoCliente))
-            print("Quitado " + ipCliente + ":" + str(puertoCliente), ", ocurrió una excepción")
             desconectar = True
+            if conectado:
+                with clientes_lock:
+                    if (ipCliente, puertoCliente) in clientes:
+                            clientes.remove((ipCliente, puertoCliente))
+                print("Quitado " + ipCliente + ":" + str(puertoCliente), ", ocurrió una excepción")
+            
 
 # Se inicia el hilo para las conexiones de control
 threadControl = threading.Thread(target = aceptarConexiones, args=(sktC,))
